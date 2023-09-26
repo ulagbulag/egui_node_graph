@@ -124,10 +124,10 @@ impl NodeTemplateTrait for MyNodeTemplate {
     type NodeData = MyNodeData;
     type DataType = MyDataType;
     type ValueType = MyValueType;
-    type UserState = MyGraphState;
+    type UserState<'a> = MyGraphState;
     type CategoryType = &'static str;
 
-    fn node_finder_label(&self, _user_state: &mut Self::UserState) -> Cow<'_, str> {
+    fn node_finder_label(&self, _user_state: &mut Self::UserState<'_>) -> Cow<'_, str> {
         Cow::Borrowed(match self {
             MyNodeTemplate::MakeScalar => "New scalar",
             MyNodeTemplate::AddScalar => "Scalar add",
@@ -140,7 +140,7 @@ impl NodeTemplateTrait for MyNodeTemplate {
     }
 
     // this is what allows the library to show collapsible lists in the node finder.
-    fn node_finder_categories(&self, _user_state: &mut Self::UserState) -> Vec<&'static str> {
+    fn node_finder_categories(&self, _user_state: &mut Self::UserState<'_>) -> Vec<&'static str> {
         match self {
             MyNodeTemplate::MakeScalar
             | MyNodeTemplate::AddScalar
@@ -152,20 +152,20 @@ impl NodeTemplateTrait for MyNodeTemplate {
         }
     }
 
-    fn node_graph_label(&self, user_state: &mut Self::UserState) -> String {
+    fn node_graph_label(&self, user_state: &mut Self::UserState<'_>) -> String {
         // It's okay to delegate this to node_finder_label if you don't want to
         // show different names in the node finder and the node itself.
         self.node_finder_label(user_state).into()
     }
 
-    fn user_data(&self, _user_state: &mut Self::UserState) -> Self::NodeData {
+    fn user_data(&self, _user_state: &mut Self::UserState<'_>) -> Self::NodeData {
         MyNodeData { template: *self }
     }
 
     fn build_node(
         &self,
         graph: &mut Graph<Self::NodeData, Self::DataType, Self::ValueType>,
-        _user_state: &mut Self::UserState,
+        _user_state: &mut Self::UserState<'_>,
         node_id: NodeId,
     ) {
         // The nodes are created empty by default. This function needs to take
@@ -280,7 +280,7 @@ impl NodeTemplateIter for AllMyNodeTemplates {
 
 impl WidgetValueTrait for MyValueType {
     type Response = MyResponse;
-    type UserState = MyGraphState;
+    type UserState<'a> = MyGraphState;
     type NodeData = MyNodeData;
     fn value_widget(
         &mut self,
@@ -317,7 +317,7 @@ impl WidgetValueTrait for MyValueType {
 impl UserResponseTrait for MyResponse {}
 impl NodeDataTrait for MyNodeData {
     type Response = MyResponse;
-    type UserState = MyGraphState;
+    type UserState<'a> = MyGraphState;
     type DataType = MyDataType;
     type ValueType = MyValueType;
 
@@ -331,7 +331,7 @@ impl NodeDataTrait for MyNodeData {
         ui: &mut egui::Ui,
         node_id: NodeId,
         _graph: &Graph<MyNodeData, MyDataType, MyValueType>,
-        user_state: &mut Self::UserState,
+        user_state: &mut Self::UserState<'_>,
     ) -> Vec<NodeResponse<MyResponse, MyNodeData>>
     where
         MyResponse: UserResponseTrait,
@@ -369,8 +369,7 @@ impl NodeDataTrait for MyNodeData {
 }
 
 type MyGraph = Graph<MyNodeData, MyDataType, MyValueType>;
-type MyEditorState =
-    GraphEditorState<MyNodeData, MyDataType, MyValueType, MyNodeTemplate, MyGraphState>;
+type MyEditorState = GraphEditorState<MyNodeData, MyDataType, MyValueType, MyNodeTemplate>;
 
 #[derive(Default)]
 pub struct NodeGraphExample {

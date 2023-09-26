@@ -83,36 +83,33 @@ pub struct GraphNodeWidget<'a, NodeData, DataType, ValueType> {
     pub pan: egui::Vec2,
 }
 
-impl<NodeData, DataType, ValueType, NodeTemplate, UserResponse, UserState, CategoryType>
-    GraphEditorState<NodeData, DataType, ValueType, NodeTemplate, UserState>
+impl<'a, NodeData, DataType, ValueType, NodeTemplate>
+    GraphEditorState<NodeData, DataType, ValueType, NodeTemplate>
 where
-    NodeData: NodeDataTrait<
-        Response = UserResponse,
-        UserState = UserState,
-        DataType = DataType,
-        ValueType = ValueType,
+    NodeData: NodeDataTrait<DataType = DataType, ValueType = ValueType>,
+    <NodeData as NodeDataTrait>::Response: UserResponseTrait,
+    ValueType: WidgetValueTrait<
+        Response = <NodeData as NodeDataTrait>::Response,
+        UserState<'a> = <NodeData as NodeDataTrait>::UserState<'a>,
+        NodeData = NodeData,
     >,
-    UserResponse: UserResponseTrait,
-    ValueType:
-        WidgetValueTrait<Response = UserResponse, UserState = UserState, NodeData = NodeData>,
     NodeTemplate: NodeTemplateTrait<
         NodeData = NodeData,
         DataType = DataType,
         ValueType = ValueType,
-        UserState = UserState,
-        CategoryType = CategoryType,
+        UserState<'a> = <NodeData as NodeDataTrait>::UserState<'a>,
     >,
-    DataType: DataTypeTrait<UserState>,
-    CategoryType: CategoryTrait,
+    DataType: DataTypeTrait<<NodeData as NodeDataTrait>::UserState<'a>>,
+    <NodeTemplate as NodeTemplateTrait>::CategoryType: CategoryTrait,
 {
     #[must_use]
     pub fn draw_graph_editor(
         &mut self,
         ui: &mut Ui,
         all_kinds: impl NodeTemplateIter<Item = NodeTemplate>,
-        user_state: &mut UserState,
-        prepend_responses: Vec<NodeResponse<UserResponse, NodeData>>,
-    ) -> GraphResponse<UserResponse, NodeData> {
+        user_state: &mut <NodeData as NodeDataTrait>::UserState<'a>,
+        prepend_responses: Vec<NodeResponse<<NodeData as NodeDataTrait>::Response, NodeData>>,
+    ) -> GraphResponse<<NodeData as NodeDataTrait>::Response, NodeData> {
         // This causes the graph editor to use as much free space as it can.
         // (so for windows it will use up to the resizeably set limit
         // and for a Panel it will fill it completely)
@@ -131,7 +128,9 @@ where
 
         // The responses returned from node drawing have side effects that are best
         // executed at the end of this function.
-        let mut delayed_responses: Vec<NodeResponse<UserResponse, NodeData>> = prepend_responses;
+        let mut delayed_responses: Vec<
+            NodeResponse<<NodeData as NodeDataTrait>::Response, NodeData>,
+        > = prepend_responses;
 
         // Used to detect when the background was clicked
         let mut click_on_background = false;
@@ -160,7 +159,7 @@ where
 
         /* Draw nodes */
         for node_id in self.node_order.iter().copied() {
-            let responses = GraphNodeWidget {
+            let widget = GraphNodeWidget {
                 position: self.node_positions.get_mut(node_id).unwrap(),
                 graph: &mut self.graph,
                 port_locations: &mut port_locations,
@@ -172,8 +171,8 @@ where
                     .iter()
                     .any(|selected| *selected == node_id),
                 pan: self.pan_zoom.pan + editor_rect.min.to_vec2(),
-            }
-            .show(ui, user_state);
+            };
+            let responses = widget.show(ui, user_state);
 
             // Actions executed later
             delayed_responses.extend(responses);
@@ -299,7 +298,9 @@ where
 
         // Some responses generate additional responses when processed. These
         // are stored here to report them back to the user.
-        let mut extra_responses: Vec<NodeResponse<UserResponse, NodeData>> = Vec::new();
+        let mut extra_responses: Vec<
+            NodeResponse<<NodeData as NodeDataTrait>::Response, NodeData>,
+        > = Vec::new();
 
         for response in delayed_responses.iter() {
             match response {
@@ -461,27 +462,24 @@ fn draw_connection(painter: &Painter, src_pos: Pos2, dst_pos: Pos2, color: Color
 #[derive(Clone, Copy, Debug)]
 struct OuterRectMemory(Rect);
 
-impl<'a, NodeData, DataType, ValueType, UserResponse, UserState>
-    GraphNodeWidget<'a, NodeData, DataType, ValueType>
+impl<'a, 'w, NodeData, DataType, ValueType> GraphNodeWidget<'w, NodeData, DataType, ValueType>
 where
-    NodeData: NodeDataTrait<
-        Response = UserResponse,
-        UserState = UserState,
-        DataType = DataType,
-        ValueType = ValueType,
+    NodeData: NodeDataTrait<DataType = DataType, ValueType = ValueType>,
+    <NodeData as NodeDataTrait>::Response: UserResponseTrait,
+    ValueType: WidgetValueTrait<
+        Response = <NodeData as NodeDataTrait>::Response,
+        UserState<'a> = <NodeData as NodeDataTrait>::UserState<'a>,
+        NodeData = NodeData,
     >,
-    UserResponse: UserResponseTrait,
-    ValueType:
-        WidgetValueTrait<Response = UserResponse, UserState = UserState, NodeData = NodeData>,
-    DataType: DataTypeTrait<UserState>,
+    DataType: DataTypeTrait<<NodeData as NodeDataTrait>::UserState<'a>>,
 {
     pub const MAX_NODE_SIZE: [f32; 2] = [200.0, 200.0];
 
     pub fn show(
         self,
         ui: &mut Ui,
-        user_state: &mut UserState,
-    ) -> Vec<NodeResponse<UserResponse, NodeData>> {
+        user_state: &mut <NodeData as NodeDataTrait>::UserState<'a>,
+    ) -> Vec<NodeResponse<<NodeData as NodeDataTrait>::Response, NodeData>> {
         let mut child_ui = ui.child_ui_with_id_source(
             Rect::from_min_size(*self.position + self.pan, Self::MAX_NODE_SIZE.into()),
             Layout::default(),
@@ -496,10 +494,11 @@ where
     fn show_graph_node(
         self,
         ui: &mut Ui,
-        user_state: &mut UserState,
-    ) -> Vec<NodeResponse<UserResponse, NodeData>> {
+        user_state: &mut <NodeData as NodeDataTrait>::UserState<'a>,
+    ) -> Vec<NodeResponse<<NodeData as NodeDataTrait>::Response, NodeData>> {
         let margin = egui::vec2(15.0, 5.0);
-        let mut responses = Vec::<NodeResponse<UserResponse, NodeData>>::new();
+        let mut responses =
+            Vec::<NodeResponse<<NodeData as NodeDataTrait>::Response, NodeData>>::new();
 
         let background_color;
         let text_color;

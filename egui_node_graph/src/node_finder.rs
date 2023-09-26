@@ -14,10 +14,9 @@ pub struct NodeFinder<NodeTemplate> {
     _phantom: PhantomData<NodeTemplate>,
 }
 
-impl<NodeTemplate, NodeData, UserState, CategoryType> NodeFinder<NodeTemplate>
+impl<NodeTemplate, NodeData, CategoryType> NodeFinder<NodeTemplate>
 where
-    NodeTemplate:
-        NodeTemplateTrait<NodeData = NodeData, UserState = UserState, CategoryType = CategoryType>,
+    NodeTemplate: NodeTemplateTrait<NodeData = NodeData, CategoryType = CategoryType>,
     CategoryType: CategoryTrait,
 {
     pub fn new_at(pos: Pos2) -> Self {
@@ -36,7 +35,7 @@ where
         &mut self,
         ui: &mut Ui,
         all_kinds: impl NodeTemplateIter<Item = NodeTemplate>,
-        user_state: &mut UserState,
+        user_state: &mut <NodeTemplate as NodeTemplateTrait>::UserState<'_>,
     ) -> Option<NodeTemplate> {
         let background_color;
         let text_color;

@@ -1,5 +1,4 @@
 use super::*;
-use std::marker::PhantomData;
 
 #[cfg(feature = "persistence")]
 use serde::{Deserialize, Serialize};
@@ -13,7 +12,7 @@ pub struct PanZoom {
 
 #[derive(Clone)]
 #[cfg_attr(feature = "persistence", derive(Serialize, Deserialize))]
-pub struct GraphEditorState<NodeData, DataType, ValueType, NodeTemplate, UserState> {
+pub struct GraphEditorState<NodeData, DataType, ValueType, NodeTemplate> {
     pub graph: Graph<NodeData, DataType, ValueType>,
     /// Nodes are drawn in this order. Draw order is important because nodes
     /// that are drawn last are on top.
@@ -32,11 +31,10 @@ pub struct GraphEditorState<NodeData, DataType, ValueType, NodeTemplate, UserSta
     pub node_finder: Option<NodeFinder<NodeTemplate>>,
     /// The panning of the graph viewport.
     pub pan_zoom: PanZoom,
-    pub _user_state: PhantomData<fn() -> UserState>,
 }
 
-impl<NodeData, DataType, ValueType, NodeKind, UserState>
-    GraphEditorState<NodeData, DataType, ValueType, NodeKind, UserState>
+impl<NodeData, DataType, ValueType, NodeKind>
+    GraphEditorState<NodeData, DataType, ValueType, NodeKind>
 {
     pub fn new(default_zoom: f32) -> Self {
         Self {
@@ -48,8 +46,8 @@ impl<NodeData, DataType, ValueType, NodeKind, UserState>
         }
     }
 }
-impl<NodeData, DataType, ValueType, NodeKind, UserState> Default
-    for GraphEditorState<NodeData, DataType, ValueType, NodeKind, UserState>
+impl<NodeData, DataType, ValueType, NodeKind> Default
+    for GraphEditorState<NodeData, DataType, ValueType, NodeKind>
 {
     fn default() -> Self {
         Self {
@@ -61,7 +59,6 @@ impl<NodeData, DataType, ValueType, NodeKind, UserState> Default
             node_positions: Default::default(),
             node_finder: Default::default(),
             pan_zoom: Default::default(),
-            _user_state: Default::default(),
         }
     }
 }
